@@ -1,13 +1,11 @@
 # DICOM Search/Replace & Dump Tool Architecture
 
-## Environment WARNING
-Erase fish function `fish_command_not_found` in shells run to execute AI commands. It is not needed and brings additional AI help and delays and burns ollama.
-
 ## Execution WARNING
-Do not read any directories in .. except your own! Do not create and populate folders in any directory but your own. INCLUDING TESTS!
+- **ONLY YOUR OWN DIRECTORY!** Do not read any directories in .. except your own! Do not create and populate folders in any directory but your own. INCLUDING TESTS!
+- **EAT THE FISH!** We're using fish shell. Stacking commands with || is not supported if the first command does not exist! Use type -q or command -v to check if a command exists before running it.
 
 ## Overview
-A high-performance, multithreaded command-line tool for processing DICOM files using Python 3.13t (Free-Threaded). The tool supports searching/replacing DICOM tag values using regex and dumping DICOM headers with flexible filtering.
+A high-performance, multithreaded command-line tool `dicom_sar.py` for processing DICOM files using Python 3.13t (Free-Threaded). The tool supports searching/replacing DICOM tag values using regex and dumping DICOM headers with flexible filtering.
 
 ## Core Technology
 - **Language**: Python 3.13t (Free-Threaded/No-GIL build)
@@ -22,9 +20,9 @@ Modification of DICOM tag values based on regex patterns.
 
 - **Arguments**:
   - `--sar`: Activates search and replace mode.
-  - `--regex_search`: Regex pattern to find (e.g., `(\d+)`).
+  - `--regex_search`: Regex pattern to find (e.g., `^(.*)$`).
   - `--regex_replace`: Replacement pattern with backreferences (e.g., `GENHOSP\1`).
-  - `--tag`: (Optional but Recommended) specific element to target, allowing "lazy" format (group,element) or keyword (e.g., `(10,20)`, `PatientID`). Input is HEX. Defaults to iterating all string-based VRs If omitted, require a --force flag. 
+  - `--tag`: (Optional but Recommended) specific element to target, allowing "lazy" format (group,element) or keyword (e.g., `(10,20)`, `PatientID`). Use regex to parse multiples as example: "(0010, 0020), (0010,0010)". Spacing is variable. Input is HEX. Defaults to iterating all string-based VRs If omitted, require a --force flag. 
   - `--dry-run`: Preview changes without writing to disk.
   - `--inplace`: Modify files in place (default: False? Or default True with backup?). Setup: Safe by default (backup or new dir).
 
@@ -47,6 +45,9 @@ Inspection of DICOM files.
   - Use `ThreadPoolExecutor` to manage worker threads.
   - **Worker Count**: Default to `max(1, os.cpu_count() - 4)` (leave some cores for system).
   - **Queue Management**: standard `queue.Queue` or executor map for backpressure, rather than manual sleep/waits.
+
+## Observability & Logging
+- **Logging**: Use `logging` module with INFO level for normal operation and DEBUG for verbose output to `dicom_sar.log`.
 - **Metrics**:
   - Live progress bar (e.g., `tqdm`) or periodic status code updates.
   - Report:
@@ -62,7 +63,10 @@ Inspection of DICOM files.
 ## Testing
 - Create a virtual environment with python 3.13t in the script folder 
 - Install requirements to that venv
-- Copy ALL DICOM files from /run/media/michael/FAST_ARCHIVE/DICOM/OFFIS/ to a test directory.
-- Run the tool against ALL FILES with --dump and --tag to verify the tool is working as expected -- it adds the string in the example.
+- Copy ALL DICOM files from /run/media/michael/FAST_ARCHIVE/DICOM/OFFIS/ to a test directory, ensuring permissions, write permission must exist when done, this has failed before.
+- Run the tool against ALL FILES with --dump and --tag using example values above to verify the tool is working as expected -- it adds the string in the example.
 - Verify with before and after sort/uniq/wc on the tag you are testing.
 - Some files do not have a patient id and so the count is expected not to match. 
+
+## Notes
+# Manual Validation command: `find /run/media/michael/FAST_ARCHIVE/DICOM -type f -exec dcmdump +sd {} \; 2>/dev/null | grep "0010,0020" | sort | uniq -c | sort -rn`
